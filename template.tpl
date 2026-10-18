@@ -98,16 +98,24 @@ const setInWindow = require('setInWindow');
 
 const SDK_URL = 'https://cdn.usesequential.com/sdk/sequential/v1/sequential.js';
 
-const key = makeString(data.key || '');
+const key = makeString(data.key || '').trim();
 let api = makeString(data.api || '');
 // The SDK accepts an https origin only: no path, query, user info or fragment. Drop trailing slashes.
 while (api.length > 8 && api.charAt(api.length - 1) === '/') {
   api = api.substring(0, api.length - 1);
 }
 
-// The UI validators check these too; a value from a variable can still reach here unchecked.
-if (key.indexOf('sq_sequential_') !== 0) {
-  logToConsole('Sequential: the project key must start with sq_sequential_. The SDK is not loaded.');
+// The SDK's own rule: sq_sequential_ then 1 to 64 letters or digits. A key it refuses would make the SDK
+// fall back to a page-wide search for script[data-key], which can pick another vendor's tag.
+// The UI validators check this too; a value from a variable can still reach here unchecked.
+const KEY_PREFIX = 'sq_sequential_';
+const KEY_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+let keyOk = key.indexOf(KEY_PREFIX) === 0 && key.length > KEY_PREFIX.length && key.length <= KEY_PREFIX.length + 64;
+for (let i = KEY_PREFIX.length; keyOk && i < key.length; i++) {
+  if (KEY_CHARS.indexOf(key.charAt(i)) === -1) keyOk = false;
+}
+if (!keyOk) {
+  logToConsole('Sequential: the project key must be sq_sequential_ followed by 1 to 64 letters or digits. The SDK is not loaded.');
   data.gtmOnFailure();
   return;
 }
@@ -448,6 +456,39 @@ scenarios:
     assertApi('setInWindow').wasNotCalled();
     assertApi('injectScript').wasNotCalled();
     assertApi('gtmOnFailure').wasCalled();
+- name: Refuses a key with a space
+  code: |-
+    mockData.key = 'sq_sequential_ABCDEFGHIJ KLMNOPQRSTUV';
+    runCode(mockData);
+
+    assertApi('setInWindow').wasNotCalled();
+    assertApi('injectScript').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+- name: Refuses a key with a dash
+  code: |-
+    mockData.key = 'sq_sequential_ABCDEFGHIJ-KLMNOPQRSTUV';
+    runCode(mockData);
+
+    assertApi('setInWindow').wasNotCalled();
+    assertApi('injectScript').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+- name: Refuses a key of 65 characters after the prefix
+  code: |-
+    mockData.key = 'sq_sequential_' + 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6a7b8c9d0e1f2g';
+    runCode(mockData);
+
+    assertApi('setInWindow').wasNotCalled();
+    assertApi('injectScript').wasNotCalled();
+    assertApi('gtmOnFailure').wasCalled();
+- name: Trims the key and accepts 64 characters
+  code: |-
+    mockData.key = '  sq_sequential_' + 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6a7b8c9d0e1f2' + ' ';
+    runCode(mockData);
+
+    assertApi('setInWindow').wasCalledWith('sequentialConfig', {
+      key: 'sq_sequential_A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V2W3X4Y5Z6a7b8c9d0e1f2',
+      api: 'https://api.usesequential.com'
+    }, true);
 - name: Refuses an API host that is not https
   code: |-
     mockData.api = 'http://api.usesequential.com';
