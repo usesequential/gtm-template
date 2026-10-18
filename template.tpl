@@ -23,7 +23,7 @@ ___INFO___
     "displayName": "Sequential",
     "thumbnail": "data:image/png;base64,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"
   },
-  "description": "Loads the Sequential SDK for analytics and session replay. Fire it once per page, and only after consent where your site needs it. The tag waits for analytics_storage consent when consent mode is in use.",
+  "description": "Loads the Sequential SDK for analytics and session replay. Fire it once per page. When consent mode is in use, it waits for analytics_storage consent.",
   "containerContexts": [
     "WEB"
   ]
@@ -243,7 +243,7 @@ ___WEB_PERMISSIONS___
                   },
                   {
                     "type": 8,
-                    "boolean": false
+                    "boolean": true
                   },
                   {
                     "type": 8,
