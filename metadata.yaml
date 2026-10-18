@@ -1,0 +1,5 @@
+homepage: "https://www.usesequential.com"
+documentation: "https://github.com/usesequential/gtm-template#readme"
+versions:
+  - sha: a6da6cb7c9d5b58697e61920b2cdfd7a7908ac20
+    changeNotes: First release. Loads the Sequential SDK with a project key, an API host and an optional app version. Waits for analytics_storage consent when consent mode is in use.
